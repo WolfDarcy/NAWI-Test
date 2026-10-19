@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAWI Compliance Tester (EN 45501)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035487',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; font-size: 12pt; }
+            .print-card { border: 1px solid #ccc !important; box-shadow: none !important; page-break-inside: avoid; }
+        }
+        .print-only { display: none; }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col font-sans">
+
+    <!-- Top Navigation Header -->
+    <header class="no-print bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-500 text-white p-2 rounded-lg font-bold shadow">
+                        <i class="fa-solid font-bold fa-scale-balanced text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight leading-none text-white">NAWI Tester Pro</h1>
+                        <p class="text-xs text-slate-400">EN 45501 / OIML R76 Compliance Suite</p>
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <button onclick="loadDemoData()" title="Load Sample Instrument & Test Data" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-flask text-amber-400"></i> <span>Load Demo Data</span>
+                    </button>
+                    <button onclick="confirmResetAllData()" title="Clear form & start new inspection" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-red-950 text-red-300 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-arrow-rotate-right"></i> <span>Reset Form</span>
+                    </button>
+                    <button onclick="triggerPrint()" class="px-3 py-1.5 text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> <span>Report / Print</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- Overall Status Banner -->
+        <div id="overall-status-banner" class="mb-6 p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between bg-white shadow-sm border-slate-200 gap-4">
+            <div class="flex items-center gap-4 w-full sm:w-auto">
+                <div id="status-icon-box" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                    <i class="fa-solid fa-circle-question"></i>
+                </div>
+                <div>
+                    <div class="text-xs uppercase font-bold tracking-wider text-slate-500">Overall Standard Compliance</div>
+                    <div id="status-title" class="text-xl font-bold text-slate-800">Inspection Incomplete</div>
+                    <div id="status-subtitle" class="text-xs text-slate-500">Fill in setup and test data to verify EN 45501 pass criteria.</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">Instrument Class</span>
+                    <span id="badge-class" class="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700">Class III</span>
+                </div>
+                <div class="h-8 w-px bg-slate-200"></div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">Scale Intervals (n)</span>
+                    <span id="badge-n" class="inline-block px-2.5 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700">3,000 e</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: Instrument Setup Configuration Card -->
+        <div class="no-print bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+            <div class="bg-slate-50 border-b border-slate-200 px-5 py-3.5 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-brand-500"></i> Instrument Specifications & EN 45501 Parameters
+                </h2>
+                <span class="text-xs text-slate-500">Step 1 of 2</span>
+            </div>
+
+            <div class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                <!-- Capacity Max -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Max Capacity (Max)</label>
+                    <div class="relative">
+                        <input type="number" id="spec-max" step="any" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="e.g. 15" oninput="updateSpecs()">
+                        <span class="absolute right-3 top-2.5 text-xs font-medium text-slate-400 unit-label">kg</span>
+                    </div>
+                </div>
+
+                <!-- Capacity Min -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Min Capacity (Min)</label>
+                    <div class="relative">
+                        <input type="number" id="spec-min" step="any" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="e.g. 0.1" oninput="updateSpecs()">
+                        <span class="absolute right-3 top-2.5 text-xs font-medium text-slate-400 unit-label">kg</span>
+                    </div>
+                </div>
+
+                <!-- Verification Interval e -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Verification Scale Interval (e)</label>
+                    <div class="relative">
+                        <input type="number" id="spec-e" step="any" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="e.g. 0.005" oninput="updateSpecs()">
+                        <span class="absolute right-3 top-2.5 text-xs font-medium text-slate-400 unit-label">kg</span>
+                    </div>
+                </div>
+
+                <!-- Unit selection -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Unit of Measure</label>
+                    <select id="spec-unit" onchange="updateUnits()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+                        <option value="kg">Kilograms (kg)</option>
+                        <option value="g">Grams (g)</option>
+                        <option value="mg">Milligrams (mg)</option>
+                        <option value="lb">Pounds (lb)</option>
+                    </select>
+                </div>
+
+                <!-- Accuracy Class -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Accuracy Class</label>
+                    <select id="spec-class" onchange="updateSpecs()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white">
+                        <option value="I">Class I (Special)</option>
+                        <option value="II">Class II (High)</option>
+                        <option value="III" selected>Class III (Medium)</option>
+                        <option value="IIII">Class IIII (Ordinary)</option>
+                    </select>
+                </div>
+
+                <!-- MPE Mode -->
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">Tolerance Regime (MPE)</label>
+                    <select id="spec-mpe-mode" onchange="updateSpecs()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white text-slate-700">
+                        <option value="initial">Initial Verification (1.0 × MPE)</option>
+                        <option value="service">In-Service / Field Test (2.0 × MPE)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Instrument Meta Info (Serial/Make/Location) -->
+            <div class="px-5 pb-4 pt-1 bg-slate-50/50 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input type="text" id="meta-make" class="px-3 py-1.5 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-500" placeholder="Manufacturer / Model (e.g. Mettler Toledo ICS425)" oninput="saveData()">
+                <input type="text" id="meta-sn" class="px-3 py-1.5 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-500" placeholder="Serial Number (e.g. SN-8820941)" oninput="saveData()">
+                <input type="text" id="meta-inspector" class="px-3 py-1.5 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-brand-500" placeholder="Inspector Name / ID" oninput="saveData()">
+            </div>
+        </div>
+
+        <!-- Section 2: Tabbed Test Modules -->
+        <div class="no-print bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <!-- Tabs Bar -->
+            <div class="flex border-b border-slate-200 bg-slate-100 overflow-x-auto">
+                <button onclick="switchTab('linearity')" id="tab-btn-linearity" class="tab-btn px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 border-brand-500 text-brand-600 bg-white flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-chart-line"></i> Linearity & Hysteresis
+                </button>
+                <button onclick="switchTab('eccentricity')" id="tab-btn-eccentricity" class="tab-btn px-5 py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-bullseye"></i> Eccentricity (Off-Center)
+                </button>
+                <button onclick="switchTab('repeatability')" id="tab-btn-repeatability" class="tab-btn px-5 py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-arrows-rotate"></i> Repeatability
+                </button>
+                <button onclick="switchTab('report')" id="tab-btn-report" class="tab-btn px-5 py-3 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap ml-auto bg-slate-50">
+                    <i class="fa-solid fa-file-contract text-brand-500"></i> Summary & Certificate
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6">
+                <!-- TAB 1: LINEARITY AND HYSTERESIS -->
+                <div id="tab-linearity" class="tab-content space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Linearity & Hysteresis Test</h3>
+                            <p class="text-xs text-slate-500">Apply test weights in increasing and decreasing order. Max permissible error (MPE) calculated automatically per EN 45501 standard.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="autoFillLinearityPoints()" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-md transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Auto-Generate Points
+                            </button>
+                            <button onclick="addLinearityRow()" class="px-3 py-1.5 text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-white rounded-md transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Add Load Step
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left text-xs sm:text-sm">
+                            <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-2.5 px-3">Nominal Load (<span class="unit-label">kg</span>)</th>
+                                    <th class="py-2.5 px-3">Inc. Indication (<span class="unit-label">kg</span>)</th>
+                                    <th class="py-2.5 px-3">Dec. Indication (<span class="unit-label">kg</span>)</th>
+                                    <th class="py-2.5 px-3">Inc. Error</th>
+                                    <th class="py-2.5 px-3">Dec. Error</th>
+                                    <th class="py-2.5 px-3">Hysteresis</th>
+                                    <th class="py-2.5 px-3">MPE Limit</th>
+                                    <th class="py-2.5 px-3 text-center">Status</th>
+                                    <th class="py-2.5 px-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="linearity-table-body" class="divide-y divide-slate-200 bg-white">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-xs text-slate-400 italic">
+                        * Note: Hysteresis is the absolute difference between increasing and decreasing indications for the same load step. Maximum allowable hysteresis error equals |MPE|.
+                    </div>
+                </div>
+
+                <!-- TAB 2: ECCENTRICITY -->
+                <div id="tab-eccentricity" class="tab-content hidden space-y-4">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Eccentricity / Off-Center Load Test</h3>
+                            <p class="text-xs text-slate-500">According to EN 45501 (Clause 3.6.2), test load is typically ~1/3 Max (or 1/10 Max for containers). Apply load sequentially across positions.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold text-slate-600">Test Load:</label>
+                            <div class="relative w-32">
+                                <input type="number" id="ecc-test-load" step="any" class="w-full pl-2 pr-7 py-1 border border-slate-300 rounded text-xs font-bold" placeholder="Load" oninput="updateEccentricityLoad(this.value)">
+                                <span class="absolute right-2 top-1.5 text-xs text-slate-400 unit-label">kg</span>
+                            </div>
+                            <button onclick="setEccLoadThird()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-medium rounded">Set 1/3 Max</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                        <!-- Visual Pan Diagram -->
+                        <div class="lg:col-span-5 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-xs font-semibold text-slate-500 mb-2">Platform Pan Layout (Top View)</span>
+                            <div class="relative w-64 h-64 bg-slate-200/70 border-4 border-slate-300 rounded-2xl shadow-inner flex flex-col justify-between p-4">
+                                <!-- Corner 1 & 2 -->
+                                <div class="flex justify-between">
+                                    <div class="w-12 h-12 bg-white border-2 border-brand-500 rounded-lg shadow flex flex-col items-center justify-center text-xs font-bold text-slate-700">
+                                        <span>P2</span>
+                                        <span id="diagram-p2" class="text-[10px] text-brand-600">--</span>
+                                    </div>
+                                    <div class="w-12 h-12 bg-white border-2 border-brand-500 rounded-lg shadow flex flex-col items-center justify-center text-xs font-bold text-slate-700">
+                                        <span>P3</span>
+                                        <span id="diagram-p3" class="text-[10px] text-brand-600">--</span>
+                                    </div>
+                                </div>
+                                <!-- Center P1 -->
+                                <div class="flex justify-center">
+                                    <div class="w-14 h-14 bg-white border-2 border-amber-500 rounded-lg shadow flex flex-col items-center justify-center text-xs font-bold text-slate-800">
+                                        <span>P1 (Ctr)</span>
+                                        <span id="diagram-p1" class="text-[10px] text-amber-600">--</span>
+                                    </div>
+                                </div>
+                                <!-- Corner 4 & 5 -->
+                                <div class="flex justify-between">
+                                    <div class="w-12 h-12 bg-white border-2 border-brand-500 rounded-lg shadow flex flex-col items-center justify-center text-xs font-bold text-slate-700">
+                                        <span>P5</span>
+                                        <span id="diagram-p5" class="text-[10px] text-brand-600">--</span>
+                                    </div>
+                                    <div class="w-12 h-12 bg-white border-2 border-brand-500 rounded-lg shadow flex flex-col items-center justify-center text-xs font-bold text-slate-700">
+                                        <span>P4</span>
+                                        <span id="diagram-p4" class="text-[10px] text-brand-600">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table Data Entry -->
+                        <div class="lg:col-span-7">
+                            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                                <table class="w-full text-left text-xs sm:text-sm">
+                                    <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-2.5 px-3">Position</th>
+                                            <th class="py-2.5 px-3">Indication (<span class="unit-label">kg</span>)</th>
+                                            <th class="py-2.5 px-3">Error</th>
+                                            <th class="py-2.5 px-3">MPE Limit</th>
+                                            <th class="py-2.5 px-3 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="eccentricity-table-body" class="divide-y divide-slate-200 bg-white">
+                                        <!-- Built in script -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: REPEATABILITY -->
+                <div id="tab-repeatability" class="tab-content hidden space-y-4">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Repeatability Test (EN 45501 Clause 3.6.1)</h3>
+                            <p class="text-xs text-slate-500">Perform multiple weighings (3 to 10 repetitions) at selected test loads (e.g., 50% Max and 100% Max). Difference between max and min indication must not exceed |MPE|.</p>
+                        </div>
+                        <button onclick="addRepeatabilitySeries()" class="px-3 py-1.5 text-xs font-semibold bg-brand-500 hover:bg-brand-600 text-white rounded-md transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i> Add Test Load Series
+                        </button>
+                    </div>
+
+                    <div id="repeatability-container" class="space-y-4">
+                        <!-- Repeatability series cards inserted dynamically -->
+                    </div>
+                </div>
+
+                <!-- TAB 4: CERTIFICATE & REPORT PREVIEW -->
+                <div id="tab-report" class="tab-content hidden space-y-6">
+                    <div class="flex justify-between items-center bg-brand-50 p-4 rounded-xl border border-brand-100">
+                        <div>
+                            <h3 class="text-base font-bold text-brand-900">EN 45501 Inspection Certificate Preview</h3>
+                            <p class="text-xs text-brand-700">Review final test metrics below or hit print to output standard calibration/verification sheets.</p>
+                        </div>
+                        <button onclick="triggerPrint()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-lg shadow flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> Print / Save as PDF
+                        </button>
+                    </div>
+
+                    <!-- Certificate Box (Will be styled clearly for print) -->
+                    <div id="printable-certificate" class="bg-white p-6 rounded-xl border border-slate-300 shadow-sm space-y-6">
+                        <!-- Cert Header -->
+                        <div class="border-b-2 border-slate-800 pb-4 flex justify-between items-start">
+                            <div>
+                                <h1 class="text-xl font-bold text-slate-900 tracking-tight uppercase">Verification Test Certificate</h1>
+                                <p class="text-xs text-slate-600">Non-Automatic Weighing Instrument (NAWI) - EN 45501 / OIML R76 Compliance</p>
+                            </div>
+                            <div class="text-right">
+                                <div id="cert-status-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 uppercase tracking-wide">
+                                    COMPLIANT / PASS
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-1">Date: <span id="cert-date">--</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Cert Specs Grid -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs">
+                            <div>
+                                <span class="text-slate-500 block font-medium">Make / Model:</span>
+                                <span id="cert-make" class="font-bold text-slate-800">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-medium">Serial Number:</span>
+                                <span id="cert-sn" class="font-bold text-slate-800">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-medium">Max / Min Capacity:</span>
+                                <span id="cert-cap" class="font-bold text-slate-800">--</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block font-medium">Interval (e) / Class:</span>
+                                <span id="cert-e-class" class="font-bold text-slate-800">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Executive Summary Results -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="p-3 border rounded-lg border-slate-200 bg-slate-50/50 text-xs">
+                                <div class="font-bold text-slate-700 border-b pb-1 mb-1 flex justify-between">
+                                    <span>Linearity & Hysteresis</span>
+                                    <span id="summary-lin-status" class="font-bold">--</span>
+                                </div>
+                                <p class="text-slate-500">Max Error Inc: <strong id="summary-lin-max-err" class="text-slate-800">--</strong></p>
+                                <p class="text-slate-500">Max Hysteresis: <strong id="summary-lin-max-hyst" class="text-slate-800">--</strong></p>
+                            </div>
+
+                            <div class="p-3 border rounded-lg border-slate-200 bg-slate-50/50 text-xs">
+                                <div class="font-bold text-slate-700 border-b pb-1 mb-1 flex justify-between">
+                                    <span>Eccentricity</span>
+                                    <span id="summary-ecc-status" class="font-bold">--</span>
+                                </div>
+                                <p class="text-slate-500">Test Load: <strong id="summary-ecc-load" class="text-slate-800">--</strong></p>
+                                <p class="text-slate-500">Max Off-Center Err: <strong id="summary-ecc-max-err" class="text-slate-800">--</strong></p>
+                            </div>
+
+                            <div class="p-3 border rounded-lg border-slate-200 bg-slate-50/50 text-xs">
+                                <div class="font-bold text-slate-700 border-b pb-1 mb-1 flex justify-between">
+                                    <span>Repeatability</span>
+                                    <span id="summary-rep-status" class="font-bold">--</span>
+                                </div>
+                                <p class="text-slate-500">Max Range ($\Delta$): <strong id="summary-rep-max-dev" class="text-slate-800">--</strong></p>
+                                <p class="text-slate-500">Max Allowed Dev: <strong id="summary-rep-mpe" class="text-slate-800">--</strong></p>
+                            </div>
+                        </div>
+
+                        <!-- Tables Summaries in Report -->
+                        <div class="space-y-4 text-xs">
+                            <h4 class="font-bold text-slate-800 border-b pb-1">1. Linearity & Hysteresis Breakdown</h4>
+                            <table class="w-full border text-left">
+                                <thead class="bg-slate-100 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-1.5">Load</th>
+                                        <th class="p-1.5">Inc. Ind.</th>
+                                        <th class="p-1.5">Dec. Ind.</th>
+                                        <th class="p-1.5">Inc Error</th>
+                                        <th class="p-1.5">Dec Error</th>
+                                        <th class="p-1.5">Hyst.</th>
+                                        <th class="p-1.5">MPE</th>
+                                        <th class="p-1.5">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-linearity-body" class="divide-y"></tbody>
+                            </table>
+
+                            <h4 class="font-bold text-slate-800 border-b pb-1 pt-2">2. Eccentricity Breakdown</h4>
+                            <table class="w-full border text-left">
+                                <thead class="bg-slate-100 font-semibold border-b">
+                                    <tr>
+                                        <th class="p-1.5">Position</th>
+                                        <th class="p-1.5">Indication</th>
+                                        <th class="p-1.5">Error</th>
+                                        <th class="p-1.5">MPE</th>
+                                        <th class="p-1.5">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-eccentricity-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Sign off area -->
+                        <div class="pt-8 grid grid-cols-2 gap-8 border-t border-slate-200 mt-6 text-xs">
+                            <div>
+                                <p class="text-slate-500 mb-6">Tested By (Inspector Signature):</p>
+                                <div class="border-b border-slate-400 w-3/4"></div>
+                                <p id="cert-inspector-name" class="font-semibold text-slate-700 mt-1">--</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-500 mb-6">Approved / Stamp:</p>
+                                <div class="border-b border-slate-400 w-3/4"></div>
+                                <p class="font-semibold text-slate-700 mt-1">Authorized Representative</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Global Application State & Logic Script -->
+    <script>
+        // Default Instrument State Structure
+        let appState = {
+            spec: {
+                max: 15,
+                min: 0.1,
+                e: 0.005,
+                unit: 'kg',
+                accuracyClass: 'III',
+                mpeMode: 'initial' // 'initial' or 'service'
+            },
+            meta: {
+                make: '',
+                sn: '',
+                inspector: ''
+            },
+            linearity: [
+                { load: 0.1, inc: 0.100, dec: 0.100 },
+                { load: 2.5, inc: 2.500, dec: 2.500 },
+                { load: 10.0, inc: 10.005, dec: 10.005 },
+                { load: 15.0, inc: 15.005, dec: 15.000 }
+            ],
+            eccentricity: {
+                testLoad: 5.0,
+                positions: [
+                    { id: 'P1', name: 'Center (P1)', ind: 5.000 },
+                    { id: 'P2', name: 'Top-Left (P2)', ind: 5.000 },
+                    { id: 'P3', name: 'Top-Right (P3)', ind: 5.005 },
+                    { id: 'P4', name: 'Bottom-Right (P4)', ind: 5.000 },
+                    { id: 'P5', name: 'Bottom-Left (P5)', ind: 4.995 }
+                ]
+            },
+            repeatability: [
+                {
+                    load: 7.5,
+                    reps: [7.500, 7.500, 7.505, 7.500, 7.500]
+                },
+                {
+                    load: 15.0,
+                    reps: [15.005, 15.005, 15.010, 15.005, 15.005]
+                }
+            ]
+        };
+
+        // --- EN 45501 MPE Calculation Rules ---
+        function getMPEInScaleIntervals(mInE, accuracyClass) {
+            const m = Math.abs(mInE);
+            switch (accuracyClass) {
+                case 'I':
+                    if (m <= 50000) return 0.5;
+                    if (m <= 200000) return 1.0;
+                    return 1.5;
+                case 'II':
+                    if (m <= 5000) return 0.5;
+                    if (m <= 20000) return 1.0;
+                    return 1.5;
+                case 'III':
+                    if (m <= 500) return 0.5;
+                    if (m <= 2000) return 1.0;
+                    return 1.5;
+                case 'IIII':
+                    if (m <= 50) return 0.5;
+                    if (m <= 200) return 1.0;
+                    return 1.5;
+                default:
+                    return 1.0;
+            }
+        }
+
+        function calculateMPE(load) {
+            if (!appState.spec.e || appState.spec.e <= 0) return 0;
+            const mInE = Math.abs(load) / appState.spec.e;
+            const mpeInE = getMPEInScaleIntervals(mInE, appState.spec.accuracyClass);
+            const factor = appState.spec.mpeMode === 'service' ? 2.0 : 1.0;
+            return mpeInE * appState.spec.e * factor;
+        }
+
+        // --- Lifecycle & Init ---
+        window.onload = function() {
+            loadSavedData();
+            updateSpecs();
+            renderAll(true);
+        };
+
+        function saveData() {
+            appState.meta.make = document.getElementById('meta-make').value;
+            appState.meta.sn = document.getElementById('meta-sn').value;
+            appState.meta.inspector = document.getElementById('meta-inspector').value;
+
+            localStorage.setItem('nawi_tester_state', JSON.stringify(appState));
+            evaluateOverallStatus();
+        }
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('nawi_tester_state');
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to parse state:', e);
+                }
+            }
+            document.getElementById('spec-max').value = appState.spec.max || '';
+            document.getElementById('spec-min').value = appState.spec.min || '';
+            document.getElementById('spec-e').value = appState.spec.e || '';
+            document.getElementById('spec-unit').value = appState.spec.unit || 'kg';
+            document.getElementById('spec-class').value = appState.spec.accuracyClass || 'III';
+            document.getElementById('spec-mpe-mode').value = appState.spec.mpeMode || 'initial';
+
+            document.getElementById('meta-make').value = appState.meta.make || '';
+            document.getElementById('meta-sn').value = appState.meta.sn || '';
+            document.getElementById('meta-inspector').value = appState.meta.inspector || '';
+
+            updateUnits();
+        }
+
+        function updateUnits() {
+            const unit = document.getElementById('spec-unit').value;
+            appState.spec.unit = unit;
+            document.querySelectorAll('.unit-label').forEach(el => el.innerText = unit);
+            saveData();
+        }
+
+        function updateSpecs() {
+            appState.spec.max = parseFloat(document.getElementById('spec-max').value) || 0;
+            appState.spec.min = parseFloat(document.getElementById('spec-min').value) || 0;
+            appState.spec.e = parseFloat(document.getElementById('spec-e').value) || 0;
+            appState.spec.accuracyClass = document.getElementById('spec-class').value;
+            appState.spec.mpeMode = document.getElementById('spec-mpe-mode').value;
+
+            const n = appState.spec.e > 0 ? Math.round(appState.spec.max / appState.spec.e) : 0;
+            
+            document.getElementById('badge-class').innerText = `Class ${appState.spec.accuracyClass}`;
+            document.getElementById('badge-n').innerText = `${n.toLocaleString()} e`;
+
+            renderAll(false);
+            saveData();
+        }
+
+        // --- Tab Switching ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'text-brand-600', 'bg-white', 'font-semibold');
+                btn.classList.add('border-transparent', 'text-slate-600', 'font-medium');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.add('border-brand-500', 'text-brand-600', 'bg-white', 'font-semibold');
+            activeBtn.classList.remove('border-transparent', 'text-slate-600');
+
+            if (tabId === 'report') {
+                updateReportView();
+            }
+        }
+
+        // --- Master Render Coordinator ---
+        function renderAll(fullRebuild = false) {
+            renderLinearity(fullRebuild);
+            renderEccentricity(fullRebuild);
+            renderRepeatability(fullRebuild);
+            evaluateOverallStatus();
+        }
+
+        // --- 1. Linearity Module Functions ---
+        function autoFillLinearityPoints() {
+            const e = appState.spec.e;
+            const max = appState.spec.max;
+            const cls = appState.spec.accuracyClass;
+            if (!e || !max) return;
+
+            let mpeStep1InE = 500, mpeStep2InE = 2000;
+            if (cls === 'I') { mpeStep1InE = 50000; mpeStep2InE = 200000; }
+            else if (cls === 'II') { mpeStep1InE = 5000; mpeStep2InE = 20000; }
+            else if (cls === 'IIII') { mpeStep1InE = 50; mpeStep2InE = 200; }
+
+            const pMin = appState.spec.min || (e * 10);
+            const pStep1 = mpeStep1InE * e;
+            const pStep2 = mpeStep2InE * e;
+            const pHalf = max / 2;
+            const pMax = max;
+
+            let testPoints = [pMin, pStep1, pStep2, pHalf, pMax].filter(p => p > 0 && p <= max);
+            testPoints = [...new Set(testPoints.map(p => parseFloat(p.toFixed(6))))].sort((a,b) => a - b);
+
+            appState.linearity = testPoints.map(p => ({
+                load: p,
+                inc: p,
+                dec: p
+            }));
+
+            renderLinearity(true);
+            saveData();
+        }
+
+        function addLinearityRow() {
+            const lastLoad = appState.linearity.length > 0 ? appState.linearity[appState.linearity.length - 1].load : 0;
+            const nextLoad = Math.min(appState.spec.max || 10, lastLoad + (appState.spec.e * 100 || 1));
+            appState.linearity.push({ load: nextLoad, inc: nextLoad, dec: nextLoad });
+            renderLinearity(true);
+            saveData();
+        }
+
+        function removeLinearityRow(index) {
+            appState.linearity.splice(index, 1);
+            renderLinearity(true);
+            saveData();
+        }
+
+        function updateLinearityValue(index, field, val) {
+            appState.linearity[index][field] = parseFloat(val) || 0;
+            // Target specific DOM row calculation updates in-place without removing DOM focus
+            updateLinearityRowInPlace(index);
+            saveData();
+        }
+
+        function updateLinearityRowInPlace(idx) {
+            const tr = document.getElementById(`lin-row-${idx}`);
+            if (!tr) return renderLinearity(true);
+
+            const row = appState.linearity[idx];
+            const mpe = calculateMPE(row.load);
+            const incErr = row.inc - row.load;
+            const decErr = row.dec - row.load;
+            const hyst = Math.abs(row.inc - row.dec);
+
+            const incPass = Math.abs(incErr) <= (mpe + 1e-9);
+            const decPass = Math.abs(decErr) <= (mpe + 1e-9);
+            const hystPass = hyst <= (mpe + 1e-9);
+            const rowPass = incPass && decPass && hystPass;
+
+            const incCell = tr.querySelector('.cell-inc-err');
+            if (incCell) {
+                incCell.innerText = `${incErr >= 0 ? '+' : ''}${incErr.toFixed(4)}`;
+                incCell.className = `py-2 px-3 font-mono text-xs cell-inc-err ${incPass ? 'text-slate-700' : 'text-red-600 font-bold'}`;
+            }
+
+            const decCell = tr.querySelector('.cell-dec-err');
+            if (decCell) {
+                decCell.innerText = `${decErr >= 0 ? '+' : ''}${decErr.toFixed(4)}`;
+                decCell.className = `py-2 px-3 font-mono text-xs cell-dec-err ${decPass ? 'text-slate-700' : 'text-red-600 font-bold'}`;
+            }
+
+            const hystCell = tr.querySelector('.cell-hyst');
+            if (hystCell) {
+                hystCell.innerText = hyst.toFixed(4);
+                hystCell.className = `py-2 px-3 font-mono text-xs cell-hyst ${hystPass ? 'text-slate-700' : 'text-red-600 font-bold'}`;
+            }
+
+            const mpeCell = tr.querySelector('.cell-mpe');
+            if (mpeCell) mpeCell.innerText = `±${mpe.toFixed(4)}`;
+
+            const badgeCell = tr.querySelector('.cell-badge');
+            if (badgeCell) {
+                badgeCell.innerHTML = `
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${rowPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${rowPass ? 'PASS' : 'FAIL'}
+                    </span>
+                `;
+            }
+        }
+
+        function renderLinearity(fullRebuild = false) {
+            const tbody = document.getElementById('linearity-table-body');
+            
+            // If row count matches and not full rebuild, do targeted DOM calculations
+            if (!fullRebuild && tbody.children.length === appState.linearity.length) {
+                appState.linearity.forEach((_, idx) => updateLinearityRowInPlace(idx));
+                return;
+            }
+
+            tbody.innerHTML = '';
+            appState.linearity.forEach((row, idx) => {
+                const mpe = calculateMPE(row.load);
+                const incErr = row.inc - row.load;
+                const decErr = row.dec - row.load;
+                const hyst = Math.abs(row.inc - row.dec);
+
+                const incPass = Math.abs(incErr) <= (mpe + 1e-9);
+                const decPass = Math.abs(decErr) <= (mpe + 1e-9);
+                const hystPass = hyst <= (mpe + 1e-9);
+                const rowPass = incPass && decPass && hystPass;
+
+                const tr = document.createElement('tr');
+                tr.id = `lin-row-${idx}`;
+                tr.className = 'hover:bg-slate-50/80 transition-colors';
+                tr.innerHTML = `
+                    <td class="py-2 px-3">
+                        <input type="number" step="any" value="${row.load}" oninput="updateLinearityValue(${idx}, 'load', this.value)" class="w-24 px-2 py-1 border border-slate-300 rounded text-xs font-semibold">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="any" value="${row.inc}" oninput="updateLinearityValue(${idx}, 'inc', this.value)" class="w-24 px-2 py-1 border border-slate-300 rounded text-xs">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="number" step="any" value="${row.dec}" oninput="updateLinearityValue(${idx}, 'dec', this.value)" class="w-24 px-2 py-1 border border-slate-300 rounded text-xs">
+                    </td>
+                    <td class="py-2 px-3 font-mono text-xs cell-inc-err ${incPass ? 'text-slate-700' : 'text-red-600 font-bold'}">
+                        ${incErr >= 0 ? '+' : ''}${incErr.toFixed(4)}
+                    </td>
+                    <td class="py-2 px-3 font-mono text-xs cell-dec-err ${decPass ? 'text-slate-700' : 'text-red-600 font-bold'}">
+                        ${decErr >= 0 ? '+' : ''}${decErr.toFixed(4)}
+                    </td>
+                    <td class="py-2 px-3 font-mono text-xs cell-hyst ${hystPass ? 'text-slate-700' : 'text-red-600 font-bold'}">
+                        ${hyst.toFixed(4)}
+                    </td>
+                    <td class="py-2 px-3 font-mono text-xs cell-mpe text-slate-500">
+                        ±${mpe.toFixed(4)}
+                    </td>
+                    <td class="py-2 px-3 text-center cell-badge">
+                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${rowPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${rowPass ? 'PASS' : 'FAIL'}
+                        </span>
+                    </td>
+                    <td class="py-2 px-3 text-center">
+                        <button onclick="removeLinearityRow(${idx})" class="text-slate-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 2. Eccentricity Module Functions ---
+        function setEccLoadThird() {
+            const thirdMax = (appState.spec.max || 0) / 3;
+            appState.eccentricity.testLoad = parseFloat(thirdMax.toFixed(4));
+            document.getElementById('ecc-test-load').value = appState.eccentricity.testLoad;
+            renderEccentricity(false);
+            saveData();
+        }
+
+        function updateEccIndication(posIdx, val) {
+            appState.eccentricity.positions[posIdx].ind = parseFloat(val) || 0;
+            updateEccentricityRowInPlace(posIdx);
+            saveData();
+        }
+
+        function updateEccentricityLoad(val) {
+            appState.eccentricity.testLoad = parseFloat(val) || 0;
+            renderEccentricity(false);
+            saveData();
+        }
+
+        function updateEccentricityRowInPlace(posIdx) {
+            const testLoad = appState.eccentricity.testLoad || 0;
+            const mpe = calculateMPE(testLoad);
+            const pos = appState.eccentricity.positions[posIdx];
+            const err = pos.ind - testLoad;
+            const isPass = Math.abs(err) <= (mpe + 1e-9);
+
+            const diagEl = document.getElementById(`diagram-${pos.id.toLowerCase()}`);
+            if (diagEl) {
+                diagEl.innerText = `${pos.ind.toFixed(3)}`;
+                diagEl.className = `text-[10px] font-bold ${isPass ? 'text-green-600' : 'text-red-600'}`;
+            }
+
+            const tr = document.getElementById(`ecc-row-${posIdx}`);
+            if (!tr) return;
+
+            const errCell = tr.querySelector('.cell-ecc-err');
+            if (errCell) {
+                errCell.innerText = `${err >= 0 ? '+' : ''}${err.toFixed(4)}`;
+                errCell.className = `py-2.5 px-3 font-mono text-xs cell-ecc-err ${isPass ? 'text-slate-700' : 'text-red-600 font-bold'}`;
+            }
+
+            const mpeCell = tr.querySelector('.cell-ecc-mpe');
+            if (mpeCell) mpeCell.innerText = `±${mpe.toFixed(4)}`;
+
+            const badgeCell = tr.querySelector('.cell-ecc-badge');
+            if (badgeCell) {
+                badgeCell.innerHTML = `
+                    <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${isPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                        ${isPass ? 'PASS' : 'FAIL'}
+                    </span>
+                `;
+            }
+        }
+
+        function renderEccentricity(fullRebuild = false) {
+            const loadInput = document.getElementById('ecc-test-load');
+            if (document.activeElement !== loadInput) {
+                loadInput.value = appState.eccentricity.testLoad || '';
+            }
+
+            const tbody = document.getElementById('eccentricity-table-body');
+            if (!fullRebuild && tbody.children.length === appState.eccentricity.positions.length) {
+                appState.eccentricity.positions.forEach((_, idx) => updateEccentricityRowInPlace(idx));
+                return;
+            }
+
+            tbody.innerHTML = '';
+            const testLoad = appState.eccentricity.testLoad || 0;
+            const mpe = calculateMPE(testLoad);
+
+            appState.eccentricity.positions.forEach((pos, idx) => {
+                const err = pos.ind - testLoad;
+                const isPass = Math.abs(err) <= (mpe + 1e-9);
+
+                const diagEl = document.getElementById(`diagram-${pos.id.toLowerCase()}`);
+                if (diagEl) {
+                    diagEl.innerText = `${pos.ind.toFixed(3)}`;
+                    diagEl.className = `text-[10px] font-bold ${isPass ? 'text-green-600' : 'text-red-600'}`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.id = `ecc-row-${idx}`;
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-semibold text-slate-700">${pos.name}</td>
+                    <td class="py-2.5 px-3">
+                        <input type="number" step="any" value="${pos.ind}" oninput="updateEccIndication(${idx}, this.value)" class="w-28 px-2 py-1 border border-slate-300 rounded text-xs font-semibold">
+                    </td>
+                    <td class="py-2.5 px-3 font-mono text-xs cell-ecc-err ${isPass ? 'text-slate-700' : 'text-red-600 font-bold'}">
+                        ${err >= 0 ? '+' : ''}${err.toFixed(4)}
+                    </td>
+                    <td class="py-2.5 px-3 font-mono text-xs cell-ecc-mpe text-slate-500">±${mpe.toFixed(4)}</td>
+                    <td class="py-2.5 px-3 text-center cell-ecc-badge">
+                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold ${isPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${isPass ? 'PASS' : 'FAIL'}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 3. Repeatability Module Functions ---
+        function addRepeatabilitySeries() {
+            const defaultLoad = appState.spec.max || 10;
+            appState.repeatability.push({
+                load: defaultLoad,
+                reps: [defaultLoad, defaultLoad, defaultLoad]
+            });
+            renderRepeatability(true);
+            saveData();
+        }
+
+        function removeRepeatabilitySeries(sIdx) {
+            appState.repeatability.splice(sIdx, 1);
+            renderRepeatability(true);
+            saveData();
+        }
+
+        function updateRepLoad(sIdx, val) {
+            appState.repeatability[sIdx].load = parseFloat(val) || 0;
+            updateRepeatabilitySeriesInPlace(sIdx);
+            saveData();
+        }
+
+        function updateRepVal(sIdx, rIdx, val) {
+            appState.repeatability[sIdx].reps[rIdx] = parseFloat(val) || 0;
+            updateRepeatabilitySeriesInPlace(sIdx);
+            saveData();
+        }
+
+        function addRepToSeries(sIdx) {
+            if (appState.repeatability[sIdx].reps.length >= 10) return;
+            const lastVal = appState.repeatability[sIdx].reps[appState.repeatability[sIdx].reps.length - 1] || appState.repeatability[sIdx].load;
+            appState.repeatability[sIdx].reps.push(lastVal);
+            renderRepeatability(true);
+            saveData();
+        }
+
+        function removeRepFromSeries(sIdx, rIdx) {
+            if (appState.repeatability[sIdx].reps.length <= 3) return;
+            appState.repeatability[sIdx].reps.splice(rIdx, 1);
+            renderRepeatability(true);
+            saveData();
+        }
+
+        function updateRepeatabilitySeriesInPlace(sIdx) {
+            const card = document.getElementById(`rep-card-${sIdx}`);
+            if (!card) return renderRepeatability(true);
+
+            const series = appState.repeatability[sIdx];
+            const load = series.load;
+            const mpe = calculateMPE(load);
+
+            const minInd = Math.min(...series.reps);
+            const maxInd = Math.max(...series.reps);
+            const delta = maxInd - minInd;
+            const avg = series.reps.reduce((a, b) => a + b, 0) / series.reps.length;
+            const variance = series.reps.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / (series.reps.length - 1);
+            const stdDev = Math.sqrt(variance);
+
+            const isPass = delta <= (mpe + 1e-9);
+
+            const mpeHeader = card.querySelector('.rep-mpe-limit');
+            if (mpeHeader) mpeHeader.innerText = `±${mpe.toFixed(4)}`;
+
+            const badgeHeader = card.querySelector('.rep-status-badge');
+            if (badgeHeader) {
+                badgeHeader.className = `px-2 py-0.5 rounded text-xs font-bold rep-status-badge ${isPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+                badgeHeader.innerText = isPass ? 'PASS' : 'FAIL';
+            }
+
+            const statDelta = card.querySelector('.rep-stat-delta');
+            if (statDelta) {
+                statDelta.innerText = delta.toFixed(4);
+                statDelta.className = `rep-stat-delta ${isPass ? 'text-slate-800' : 'text-red-600'}`;
+            }
+
+            const statAvg = card.querySelector('.rep-stat-avg');
+            if (statAvg) statAvg.innerText = avg.toFixed(4);
+
+            const statStd = card.querySelector('.rep-stat-std');
+            if (statStd) statStd.innerText = stdDev.toFixed(5);
+
+            const statMpe = card.querySelector('.rep-stat-mpe');
+            if (statMpe) statMpe.innerText = mpe.toFixed(4);
+        }
+
+        function renderRepeatability(fullRebuild = false) {
+            const container = document.getElementById('repeatability-container');
+
+            if (!fullRebuild && container.children.length === appState.repeatability.length) {
+                appState.repeatability.forEach((_, sIdx) => updateRepeatabilitySeriesInPlace(sIdx));
+                return;
+            }
+
+            container.innerHTML = '';
+
+            appState.repeatability.forEach((series, sIdx) => {
+                const load = series.load;
+                const mpe = calculateMPE(load);
+                
+                const minInd = Math.min(...series.reps);
+                const maxInd = Math.max(...series.reps);
+                const delta = maxInd - minInd;
+                const avg = series.reps.reduce((a, b) => a + b, 0) / series.reps.length;
+                const variance = series.reps.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / (series.reps.length - 1);
+                const stdDev = Math.sqrt(variance);
+
+                const isPass = delta <= (mpe + 1e-9);
+
+                const card = document.createElement('div');
+                card.id = `rep-card-${sIdx}`;
+                card.className = 'bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3';
+                
+                let repsInputsHTML = series.reps.map((rVal, rIdx) => `
+                    <div class="flex items-center gap-1 bg-slate-50 p-1.5 rounded border border-slate-200">
+                        <span class="text-[10px] font-bold text-slate-400 w-4">#${rIdx + 1}</span>
+                        <input type="number" step="any" value="${rVal}" oninput="updateRepVal(${sIdx}, ${rIdx}, this.value)" class="w-20 px-1.5 py-0.5 border border-slate-300 rounded text-xs font-semibold">
+                        ${series.reps.length > 3 ? `<button onclick="removeRepFromSeries(${sIdx}, ${rIdx})" class="text-slate-300 hover:text-red-500 text-xs px-0.5"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                    </div>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-bold text-slate-700">Test Load Series:</label>
+                            <input type="number" step="any" value="${series.load}" oninput="updateRepLoad(${sIdx}, this.value)" class="w-24 px-2 py-1 border border-slate-300 rounded text-xs font-bold text-brand-700">
+                            <span class="text-xs text-slate-400 unit-label">${appState.spec.unit}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-slate-500">MPE Limit: <strong class="rep-mpe-limit">±${mpe.toFixed(4)}</strong></span>
+                            <span class="rep-status-badge px-2 py-0.5 rounded text-xs font-bold ${isPass ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${isPass ? 'PASS' : 'FAIL'}
+                            </span>
+                            <button onclick="removeRepeatabilitySeries(${sIdx})" class="text-slate-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Repetition Inputs Grid -->
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        ${repsInputsHTML}
+                        ${series.reps.length < 10 ? `
+                            <button onclick="addRepToSeries(${sIdx})" class="px-2.5 py-1 text-xs border border-dashed border-slate-300 text-slate-600 rounded hover:bg-slate-50 flex items-center gap-1">
+                                <i class="fa-solid fa-plus text-slate-400"></i> Rep
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- Computed Statistics Footer -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100 text-xs bg-slate-50/50 p-2 rounded">
+                        <div><span class="text-slate-400 block">Max Diff ($\Delta = I_{max} - I_{min}$):</span> <strong class="rep-stat-delta ${isPass ? 'text-slate-800' : 'text-red-600'}">${delta.toFixed(4)}</strong></div>
+                        <div><span class="text-slate-400 block">Average Indication:</span> <strong class="rep-stat-avg">${avg.toFixed(4)}</strong></div>
+                        <div><span class="text-slate-400 block">Std Dev ($\sigma$):</span> <strong class="rep-stat-std">${stdDev.toFixed(5)}</strong></div>
+                        <div><span class="text-slate-400 block">Allowed $\Delta$ Limit:</span> <strong class="rep-stat-mpe">${mpe.toFixed(4)}</strong></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- Overall Compliance Evaluator ---
+        function evaluateOverallStatus() {
+            let linPass = true;
+            appState.linearity.forEach(row => {
+                const mpe = calculateMPE(row.load);
+                if (Math.abs(row.inc - row.load) > (mpe + 1e-9) || Math.abs(row.dec - row.load) > (mpe + 1e-9) || Math.abs(row.inc - row.dec) > (mpe + 1e-9)) {
+                    linPass = false;
+                }
+            });
+
+            let eccPass = true;
+            const eccMpe = calculateMPE(appState.eccentricity.testLoad);
+            appState.eccentricity.positions.forEach(pos => {
+                if (Math.abs(pos.ind - appState.eccentricity.testLoad) > (eccMpe + 1e-9)) {
+                    eccPass = false;
+                }
+            });
+
+            let repPass = true;
+            appState.repeatability.forEach(s => {
+                const mpe = calculateMPE(s.load);
+                const delta = Math.max(...s.reps) - Math.min(...s.reps);
+                if (delta > (mpe + 1e-9)) repPass = false;
+            });
+
+            const overallPass = linPass && eccPass && repPass && appState.linearity.length > 0;
+
+            const box = document.getElementById('status-icon-box');
+            const title = document.getElementById('status-title');
+            const sub = document.getElementById('status-subtitle');
+
+            if (overallPass) {
+                box.className = 'w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center text-2xl font-bold flex-shrink-0';
+                box.innerHTML = '<i class="fa-solid fa-check"></i>';
+                title.innerText = 'PASS - EN 45501 Compliant';
+                title.className = 'text-xl font-bold text-green-700';
+                sub.innerText = 'All linearity, hysteresis, eccentricity, and repeatability tests satisfy Maximum Permissible Error limits.';
+            } else {
+                box.className = 'w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-2xl font-bold flex-shrink-0';
+                box.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                title.innerText = 'FAIL - Non-Compliant';
+                title.className = 'text-xl font-bold text-red-700';
+                sub.innerText = 'One or more test parameters exceed the Maximum Permissible Error (MPE) thresholds.';
+            }
+
+            return { overallPass, linPass, eccPass, repPass };
+        }
+
+        // --- Report Generation View Update ---
+        function updateReportView() {
+            const status = evaluateOverallStatus();
+
+            document.getElementById('cert-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('cert-make').innerText = appState.meta.make || 'Unspecified';
+            document.getElementById('cert-sn').innerText = appState.meta.sn || 'N/A';
+            document.getElementById('cert-cap').innerText = `${appState.spec.max} ${appState.spec.unit} (Min: ${appState.spec.min} ${appState.spec.unit})`;
+            document.getElementById('cert-e-class').innerText = `e = ${appState.spec.e} ${appState.spec.unit} / Class ${appState.spec.accuracyClass}`;
+            document.getElementById('cert-inspector-name').innerText = appState.meta.inspector || 'Inspector Name';
+
+            const certBadge = document.getElementById('cert-status-badge');
+            if (status.overallPass) {
+                certBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 uppercase tracking-wide';
+                certBadge.innerText = 'COMPLIANT / PASS';
+            } else {
+                certBadge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 uppercase tracking-wide';
+                certBadge.innerText = 'NON-COMPLIANT / FAIL';
+            }
+
+            document.getElementById('summary-lin-status').innerHTML = status.linPass ? '<span class="text-green-600">PASS</span>' : '<span class="text-red-600">FAIL</span>';
+            document.getElementById('summary-ecc-status').innerHTML = status.eccPass ? '<span class="text-green-600">PASS</span>' : '<span class="text-red-600">FAIL</span>';
+            document.getElementById('summary-rep-status').innerHTML = status.repPass ? '<span class="text-green-600">PASS</span>' : '<span class="text-red-600">FAIL</span>';
+
+            const linBody = document.getElementById('report-linearity-body');
+            linBody.innerHTML = '';
+            let maxIncErr = 0, maxHyst = 0;
+            appState.linearity.forEach(row => {
+                const mpe = calculateMPE(row.load);
+                const incErr = row.inc - row.load;
+                const decErr = row.dec - row.load;
+                const hyst = Math.abs(row.inc - row.dec);
+                if (Math.abs(incErr) > Math.abs(maxIncErr)) maxIncErr = incErr;
+                if (hyst > maxHyst) maxHyst = hyst;
+
+                const pass = Math.abs(incErr) <= mpe && Math.abs(decErr) <= mpe && hyst <= mpe;
+
+                linBody.innerHTML += `
+                    <tr>
+                        <td class="p-1.5 font-semibold">${row.load} ${appState.spec.unit}</td>
+                        <td class="p-1.5">${row.inc}</td>
+                        <td class="p-1.5">${row.dec}</td>
+                        <td class="p-1.5">${incErr >= 0 ? '+' : ''}${incErr.toFixed(4)}</td>
+                        <td class="p-1.5">${decErr >= 0 ? '+' : ''}${decErr.toFixed(4)}</td>
+                        <td class="p-1.5">${hyst.toFixed(4)}</td>
+                        <td class="p-1.5">±${mpe.toFixed(4)}</td>
+                        <td class="p-1.5 ${pass ? 'text-green-700 font-bold' : 'text-red-600 font-bold'}">${pass ? 'PASS' : 'FAIL'}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('summary-lin-max-err').innerText = `${maxIncErr >= 0 ? '+' : ''}${maxIncErr.toFixed(4)} ${appState.spec.unit}`;
+            document.getElementById('summary-lin-max-hyst').innerText = `${maxHyst.toFixed(4)} ${appState.spec.unit}`;
+
+            const eccBody = document.getElementById('report-eccentricity-body');
+            eccBody.innerHTML = '';
+            let maxEccErr = 0;
+            const eccMpe = calculateMPE(appState.eccentricity.testLoad);
+            appState.eccentricity.positions.forEach(pos => {
+                const err = pos.ind - appState.eccentricity.testLoad;
+                if (Math.abs(err) > Math.abs(maxEccErr)) maxEccErr = err;
+                const pass = Math.abs(err) <= eccMpe;
+
+                eccBody.innerHTML += `
+                    <tr>
+                        <td class="p-1.5 font-semibold">${pos.name}</td>
+                        <td class="p-1.5">${pos.ind} ${appState.spec.unit}</td>
+                        <td class="p-1.5">${err >= 0 ? '+' : ''}${err.toFixed(4)}</td>
+                        <td class="p-1.5">±${eccMpe.toFixed(4)}</td>
+                        <td class="p-1.5 ${pass ? 'text-green-700 font-bold' : 'text-red-600 font-bold'}">${pass ? 'PASS' : 'FAIL'}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('summary-ecc-load').innerText = `${appState.eccentricity.testLoad} ${appState.spec.unit}`;
+            document.getElementById('summary-ecc-max-err').innerText = `${maxEccErr >= 0 ? '+' : ''}${maxEccErr.toFixed(4)} ${appState.spec.unit}`;
+
+            let maxRepDev = 0;
+            let maxRepMpe = 0;
+            appState.repeatability.forEach(s => {
+                const delta = Math.max(...s.reps) - Math.min(...s.reps);
+                if (delta > maxRepDev) maxRepDev = delta;
+                const mpe = calculateMPE(s.load);
+                if (mpe > maxRepMpe) maxRepMpe = mpe;
+            });
+            document.getElementById('summary-rep-max-dev').innerText = `${maxRepDev.toFixed(4)} ${appState.spec.unit}`;
+            document.getElementById('summary-rep-mpe').innerText = `±${maxRepMpe.toFixed(4)} ${appState.spec.unit}`;
+        }
+
+        // --- Demo Data & Reset Actions ---
+        function loadDemoData() {
+            appState = {
+                spec: {
+                    max: 15,
+                    min: 0.1,
+                    e: 0.005,
+                    unit: 'kg',
+                    accuracyClass: 'III',
+                    mpeMode: 'initial'
+                },
+                meta: {
+                    make: 'Mettler Toledo ICS425',
+                    sn: 'SN-99812402',
+                    inspector: 'J. Smith (Cert #402)'
+                },
+                linearity: [
+                    { load: 0.1, inc: 0.100, dec: 0.100 },
+                    { load: 2.5, inc: 2.500, dec: 2.500 },
+                    { load: 10.0, inc: 10.005, dec: 10.005 },
+                    { load: 15.0, inc: 15.005, dec: 15.000 }
+                ],
+                eccentricity: {
+                    testLoad: 5.0,
+                    positions: [
+                        { id: 'P1', name: 'Center (P1)', ind: 5.000 },
+                        { id: 'P2', name: 'Top-Left (P2)', ind: 5.000 },
+                        { id: 'P3', name: 'Top-Right (P3)', ind: 5.005 },
+                        { id: 'P4', name: 'Bottom-Right (P4)', ind: 5.000 },
+                        { id: 'P5', name: 'Bottom-Left (P5)', ind: 4.995 }
+                    ]
+                },
+                repeatability: [
+                    {
+                        load: 7.5,
+                        reps: [7.500, 7.500, 7.505, 7.500, 7.500]
+                    },
+                    {
+                        load: 15.0,
+                        reps: [15.005, 15.005, 15.010, 15.005, 15.005]
+                    }
+                ]
+            };
+
+            // Force update specification fields in UI
+            document.getElementById('spec-max').value = appState.spec.max;
+            document.getElementById('spec-min').value = appState.spec.min;
+            document.getElementById('spec-e').value = appState.spec.e;
+            document.getElementById('spec-unit').value = appState.spec.unit;
+            document.getElementById('spec-class').value = appState.spec.accuracyClass;
+            document.getElementById('spec-mpe-mode').value = appState.spec.mpeMode;
+
+            document.getElementById('meta-make').value = appState.meta.make;
+            document.getElementById('meta-sn').value = appState.meta.sn;
+            document.getElementById('meta-inspector').value = appState.meta.inspector;
+
+            updateUnits();
+            updateSpecs();
+            renderAll(true);
+            saveData();
+        }
+
+        function confirmResetAllData() {
+            // Show custom in-page modal prompt to prevent native alert/confirm dialog issues
+            showConfirmModal("Reset All Inspection Data?", "Are you sure you want to clear all current instrument parameters and test results? This will reset the form back to blank values.", () => {
+                resetAllData();
+            });
+        }
+
+        function resetAllData() {
+            localStorage.removeItem('nawi_tester_state');
+            appState = {
+                spec: {
+                    max: '',
+                    min: '',
+                    e: '',
+                    unit: 'kg',
+                    accuracyClass: 'III',
+                    mpeMode: 'initial'
+                },
+                meta: {
+                    make: '',
+                    sn: '',
+                    inspector: ''
+                },
+                linearity: [],
+                eccentricity: {
+                    testLoad: '',
+                    positions: [
+                        { id: 'P1', name: 'Center (P1)', ind: 0 },
+                        { id: 'P2', name: 'Top-Left (P2)', ind: 0 },
+                        { id: 'P3', name: 'Top-Right (P3)', ind: 0 },
+                        { id: 'P4', name: 'Bottom-Right (P4)', ind: 0 },
+                        { id: 'P5', name: 'Bottom-Left (P5)', ind: 0 }
+                    ]
+                },
+                repeatability: []
+            };
+
+            // Explicitly reset all DOM input fields in Step 1 Specifications
+            document.getElementById('spec-max').value = '';
+            document.getElementById('spec-min').value = '';
+            document.getElementById('spec-e').value = '';
+            document.getElementById('spec-unit').value = 'kg';
+            document.getElementById('spec-class').value = 'III';
+            document.getElementById('spec-mpe-mode').value = 'initial';
+
+            // Explicitly reset Metadata input fields
+            document.getElementById('meta-make').value = '';
+            document.getElementById('meta-sn').value = '';
+            document.getElementById('meta-inspector').value = '';
+
+            // Reset eccentricity load field
+            document.getElementById('ecc-test-load').value = '';
+
+            updateUnits();
+            updateSpecs();
+            renderAll(true);
+        }
+
+        function showConfirmModal(title, text, onConfirm) {
+            let modal = document.getElementById('custom-confirm-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'custom-confirm-modal';
+                modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print';
+                document.body.appendChild(modal);
+            }
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl max-w-md w-full p-5 shadow-2xl border border-slate-200">
+                    <div class="flex items-center gap-3 text-red-600 mb-2">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                        <h3 class="font-bold text-slate-800 text-base">${title}</h3>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-5 leading-relaxed">${text}</p>
+                    <div class="flex justify-end gap-2">
+                        <button id="modal-btn-cancel" class="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-300 rounded-lg">Cancel</button>
+                        <button id="modal-btn-confirm" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm">Reset Everything</button>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+
+            document.getElementById('modal-btn-cancel').onclick = () => {
+                modal.classList.add('hidden');
+            };
+
+            document.getElementById('modal-btn-confirm').onclick = () => {
+                modal.classList.add('hidden');
+                if (typeof onConfirm === 'function') onConfirm();
+            };
+        }
+
+        function triggerPrint() {
+            switchTab('report');
+            setTimeout(() => {
+                window.print();
+            }, 200);
+        }
+    </script>
+</body>
+</html>
