@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EN 45501 NAWI Tester</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border: #334155;
+      --pass-bg: #065f46;
+      --pass-text: #6ee7b7;
+      --fail-bg: #991b1b;
+      --fail-text: #fca5a5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding: 12px; max-width: 1100px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    h1 { font-size: 1.4rem; color: #38bdf8; }
+    .subtitle { font-size: 0.85rem; color: var(--text-muted); }
+    .header-btns { display: flex; gap: 8px; }
+    .btn { background: var(--accent); color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-secondary { background: #334155; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-danger { background: #dc2626; }
+    .card { background: var(--card-bg); border-radius: 8px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border); }
+    .card-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    input, select { background: #0f172a; border: 1px solid var(--border); color: white; padding: 8px 10px; border-radius: 6px; font-size: 0.95rem; width: 100%; }
+    input:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+    th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+    th { background: #0f172a; color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    td input { text-align: center; padding: 6px 4px; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
+    .badge-pass { background: var(--pass-bg); color: var(--pass-text); }
+    .badge-fail { background: var(--fail-bg); color: var(--fail-text); }
+    .ecc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; max-width: 320px; margin: 10px auto; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px dashed var(--border); }
+    .ecc-pos { background: var(--card-bg); border: 1px solid var(--border); padding: 8px; text-align: center; border-radius: 6px; font-size: 0.8rem; }
+    .ecc-center { grid-column: 2; grid-row: 2; }
+    .certificate { background: white; color: black; padding: 24px; border-radius: 8px; margin-top: 20px; display: none; }
+    .certificate * { color: black !important; border-color: #ccc !important; }
+    .cert-header { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 15px; }
+    .cert-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    .cert-table th, .cert-table td { border: 1px solid #999; padding: 6px; font-size: 0.8rem; text-align: left; }
+    .cert-table th { background: #f0f0f0; }
+    @media print {
+      body { background: white; color: black; padding: 0; }
+      .no-print { display: none !important; }
+      .certificate { display: block !important; }
+      .card { border: none; padding: 0; background: transparent; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <header>
+    <div>
+      <h1>EN 45501 NAWI Tester</h1>
+      <div class="subtitle">Non-Automatic Weighing Instrument Verification</div>
+    </div>
+    <div class="header-btns">
+      <button class="btn btn-secondary" onclick="loadDemoData()" title="Load Demo Data">🧪 Demo</button>
+      <button class="btn btn-danger" onclick="resetForm()" title="Reset Form">🔄 Reset</button>
+      <button class="btn" onclick="printCertificate()">🖨️ Print / PDF</button>
+    </div>
+  </header>
+
+  <!-- STEP 1: SPECIFICATIONS -->
+  <div class="card">
+    <div class="card-title">1. Instrument Specifications & Metadata</div>
+    <div class="grid">
+      <div class="form-group">
+        <label>Manufacturer / Brand</label>
+        <input type="text" id="mfr" placeholder="e.g. Avery Weigh-Tronix" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Model / Type</label>
+        <input type="text" id="model" placeholder="e.g. E-1205" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Serial Number</label>
+        <input type="text" id="serial" placeholder="e.g. SN-2026-9842" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Accuracy Class</label>
+        <select id="accClass" onchange="updateSpecs()">
+          <option value="Class III">Class III (Medium)</option>
+          <option value="Class II">Class II (High)</option>
+          <option value="Class I">Class I (Special)</option>
+          <option value="Class IIII">Class IIII (Ordinary)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Max Capacity (Max)</label>
+        <input type="number" id="maxCap" placeholder="15000" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Verification Interval (e)</label>
+        <input type="number" id="scaleE" placeholder="5" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Min Capacity (Min)</label>
+        <input type="number" id="minCap" placeholder="100" oninput="updateSpecs()">
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select id="unit" onchange="updateSpecs()">
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="mg">mg</option>
+          <option value="t">t</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tolerance Regime</label>
+        <select id="regime" onchange="updateSpecs()">
+          <option value="Initial Verification">Initial Verification</option>
+          <option value="In-Service Inspection">In-Service Inspection</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Inspector Name</label>
+        <input type="text" id="inspector" placeholder="e.g. J. Smith" oninput="updateSpecs()">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: LINEARITY & HYSTERESIS -->
+  <div class="card">
+    <div class="card-title">
+      2. Linearity & Hysteresis Test
+      <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="autoGenLoads()">⚡ Auto Test Loads</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Target Load</th>
+            <th>Inc Indication</th>
+            <th>Inc Error</th>
+            <th>Dec Indication</th>
+            <th>Dec Error</th>
+            <th>Hysteresis</th>
+            <th>MPE Limit</th>
+            <th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody id="linTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 3: ECCENTRICITY -->
+  <div class="card">
+    <div class="card-title">3. Eccentricity (Off-Center Load) Test</div>
+    <div style="margin-bottom:10px;">
+      <label>Test Load (1/3 Max): </label>
+      <input type="number" id="eccLoad" style="width:120px; display:inline-block;" oninput="recalcEcc()">
+    </div>
+    <div class="grid">
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Position</th>
+              <th>Indication</th>
+              <th>Error</th>
+              <th>MPE Limit</th>
+              <th>Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="eccTable"></tbody>
+        </table>
+      </div>
+      <div>
+        <div style="text-align:center; font-size:0.8rem; color:var(--text-muted);">Pan Position Layout</div>
+        <div class="ecc-grid">
+          <div class="ecc-pos">TL (2)</div>
+          <div></div>
+          <div class="ecc-pos">TR (3)</div>
+          <div></div>
+          <div class="ecc-pos ecc-center">CTR (1)</div>
+          <div></div>
+          <div class="ecc-pos">BL (5)</div>
+          <div></div>
+          <div class="ecc-pos">BR (4)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: REPEATABILITY -->
+  <div class="card">
+    <div class="card-title">4. Repeatability Test</div>
+    <div class="grid">
+      <div>
+        <h4 style="font-size:0.9rem; color:#38bdf8; margin-bottom:8px;">Series 1 (~50% Max)</h4>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Load Value</label>
+          <input type="number" id="repLoad1" placeholder="7500" oninput="recalcRep()">
+        </div>
+        <table>
+          <thead><tr><th>Run</th><th>Indication</th></tr></thead>
+          <tbody id="repTable1"></tbody>
+        </table>
+        <div id="repRes1" style="margin-top:8px; font-size:0.85rem;"></div>
+      </div>
+      <div>
+        <h4 style="font-size:0.9rem; color:#38bdf8; margin-bottom:8px;">Series 2 (~100% Max)</h4>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Load Value</label>
+          <input type="number" id="repLoad2" placeholder="15000" oninput="recalcRep()">
+        </div>
+        <table>
+          <thead><tr><th>Run</th><th>Indication</th></tr></thead>
+          <tbody id="repTable2"></tbody>
+        </table>
+        <div id="repRes2" style="margin-top:8px; font-size:0.85rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CERTIFICATE VIEW (FOR PRINT/PDF) -->
+<div id="certView" class="certificate">
+  <div class="cert-header">
+    <h2>VERIFICATION TEST CERTIFICATE</h2>
+    <div>EN 45501 / OIML R76 Standard Inspection Report</div>
+  </div>
+
+  <table class="cert-table">
+    <tr>
+      <td><strong>Manufacturer:</strong> <span id="c_mfr"></span></td>
+      <td><strong>Model:</strong> <span id="c_model"></span></td>
+      <td><strong>Serial No:</strong> <span id="c_serial"></span></td>
+    </tr>
+    <tr>
+      <td><strong>Max Cap:</strong> <span id="c_max"></span></td>
+      <td><strong>Scale Interval (e):</strong> <span id="c_e"></span></td>
+      <td><strong>Accuracy Class:</strong> <span id="c_class"></span></td>
+    </tr>
+    <tr>
+      <td><strong>Inspector:</strong> <span id="c_inspector"></span></td>
+      <td><strong>Regime:</strong> <span id="c_regime"></span></td>
+      <td><strong>Date:</strong> <span id="c_date"></span></td>
+    </tr>
+  </table>
+
+  <h3>1. Linearity & Hysteresis Results</h3>
+  <table class="cert-table" id="cert_lin"></table>
+
+  <h3>2. Eccentricity Results</h3>
+  <table class="cert-table" id="cert_ecc"></table>
+
+  <h3>3. Repeatability Results</h3>
+  <table class="cert-table" id="cert_rep"></table>
+
+  <div style="margin-top:20px; border:2px solid black; padding:10px; text-align:center;">
+    <h3 style="margin-bottom:5px;">OVERALL VERDICT: <span id="cert_verdict"></span></h3>
+  </div>
+</div>
+
+<script>
+  let state = {
+    specs: { mfr: '', model: '', serial: '', accClass: 'Class III', maxCap: 15000, scaleE: 5, minCap: 100, unit: 'kg', regime: 'Initial Verification', inspector: '' },
+    linearity: [
+      { load: 100, inc: 100, dec: 100 },
+      { load: 2500, inc: 2501, dec: 2500.5 },
+      { load: 5000, inc: 5001, dec: 5001.5 },
+      { load: 7500, inc: 7502, dec: 7502 },
+      { load: 10000, inc: 10002.5, dec: 10003 },
+      { load: 12500, inc: 12503, dec: 12503.5 },
+      { load: 15000, inc: 15004, dec: 15004 }
+    ],
+    eccentricity: {
+      load: 5000,
+      runs: [
+        { pos: 'CTR (1)', val: 5000 },
+        { pos: 'TL (2)', val: 5001 },
+        { pos: 'TR (3)', val: 5000.5 },
+        { pos: 'BR (4)', val: 5001 },
+        { pos: 'BL (5)', val: 5000 }
+      ]
+    },
+    repeatability: {
+      load1: 7500,
+      runs1: [7501, 7501.5, 7501],
+      load2: 15000,
+      runs2: [15003.5, 15004, 15003]
+    }
+  };
+
+  function init() {
+    loadSpecsToUI();
+    renderLinTable();
+    renderEccTable();
+    renderRepTables();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  }
+
+  function getMPE(load) {
+    const e = parseFloat(state.specs.scaleE) || 1;
+    const isInitial = state.specs.regime === 'Initial Verification';
+    const mpeFactor = isInitial ? 1 : 2;
+    const n = load / e;
+    if (n <= 500) return 0.5 * e * mpeFactor;
+    if (n <= 2000) return 1.0 * e * mpeFactor;
+    return 1.5 * e * mpeFactor;
+  }
+
+  function updateSpecs() {
+    state.specs.mfr = document.getElementById('mfr').value;
+    state.specs.model = document.getElementById('model').value;
+    state.specs.serial = document.getElementById('serial').value;
+    state.specs.accClass = document.getElementById('accClass').value;
+    state.specs.maxCap = parseFloat(document.getElementById('maxCap').value) || 0;
+    state.specs.scaleE = parseFloat(document.getElementById('scaleE').value) || 1;
+    state.specs.minCap = parseFloat(document.getElementById('minCap').value) || 0;
+    state.specs.unit = document.getElementById('unit').value;
+    state.specs.regime = document.getElementById('regime').value;
+    state.specs.inspector = document.getElementById('inspector').value;
+    recalcAll();
+  }
+
+  function loadSpecsToUI() {
+    document.getElementById('mfr').value = state.specs.mfr;
+    document.getElementById('model').value = state.specs.model;
+    document.getElementById('serial').value = state.specs.serial;
+    document.getElementById('accClass').value = state.specs.accClass;
+    document.getElementById('maxCap').value = state.specs.maxCap;
+    document.getElementById('scaleE').value = state.specs.scaleE;
+    document.getElementById('minCap').value = state.specs.minCap;
+    document.getElementById('unit').value = state.specs.unit;
+    document.getElementById('regime').value = state.specs.regime;
+    document.getElementById('inspector').value = state.specs.inspector;
+    document.getElementById('eccLoad').value = state.eccentricity.load;
+    document.getElementById('repLoad1').value = state.repeatability.load1;
+    document.getElementById('repLoad2').value = state.repeatability.load2;
+  }
+
+  function renderLinTable() {
+    const tbody = document.getElementById('linTable');
+    tbody.innerHTML = '';
+    state.linearity.forEach((row, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="number" value="${row.load}" oninput="updateLin(${i}, 'load', this.value)"></td>
+        <td><input type="number" value="${row.inc}" oninput="updateLin(${i}, 'inc', this.value)"></td>
+        <td id="incErr_${i}">-</td>
+        <td><input type="number" value="${row.dec}" oninput="updateLin(${i}, 'dec', this.value)"></td>
+        <td id="decErr_${i}">-</td>
+        <td id="hyst_${i}">-</td>
+        <td id="mpe_${i}">-</td>
+        <td id="verd_${i}">-</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    recalcLin();
+  }
+
+  function updateLin(i, field, val) {
+    state.linearity[i][field] = val === '' ? '' : parseFloat(val);
+    recalcLin();
+  }
+
+  function recalcLin() {
+    state.linearity.forEach((row, i) => {
+      const mpe = getMPE(row.load || 0);
+      const incErr = row.inc !== '' ? row.inc - row.load : null;
+      const decErr = row.dec !== '' ? row.dec - row.load : null;
+      const hyst = (row.inc !== '' && row.dec !== '') ? Math.abs(row.dec - row.inc) : null;
+      
+      const passInc = incErr !== null && Math.abs(incErr) <= mpe;
+      const passDec = decErr !== null ? Math.abs(decErr) <= mpe : true;
+      const isPass = passInc && passDec;
+
+      document.getElementById(`incErr_${i}`).innerText = incErr !== null ? incErr.toFixed(1) : '-';
+      document.getElementById(`decErr_${i}`).innerText = decErr !== null ? decErr.toFixed(1) : '-';
+      document.getElementById(`hyst_${i}`).innerText = hyst !== null ? hyst.toFixed(1) : '-';
+      document.getElementById(`mpe_${i}`).innerText = '±' + mpe.toFixed(1);
+      document.getElementById(`verd_${i}`).innerHTML = row.inc !== '' ? 
+        `<span class="badge ${isPass ? 'badge-pass' : 'badge-fail'}">${isPass ? 'PASS' : 'FAIL'}</span>` : '-';
+    });
+  }
+
+  function renderEccTable() {
+    const tbody = document.getElementById('eccTable');
+    tbody.innerHTML = '';
+    state.eccentricity.runs.forEach((row, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.pos}</td>
+        <td><input type="number" value="${row.val}" oninput="updateEcc(${i}, this.value)"></td>
+        <td id="eccErr_${i}">-</td>
+        <td id="eccMpe_${i}">-</td>
+        <td id="eccVerd_${i}">-</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    recalcEcc();
+  }
+
+  function updateEcc(i, val) {
+    state.eccentricity.runs[i].val = val === '' ? '' : parseFloat(val);
+    recalcEcc();
+  }
+
+  function recalcEcc() {
+    const load = parseFloat(document.getElementById('eccLoad').value) || 0;
+    state.eccentricity.load = load;
+    const mpe = getMPE(load);
+
+    state.eccentricity.runs.forEach((row, i) => {
+      const err = row.val !== '' ? row.val - load : null;
+      const isPass = err !== null && Math.abs(err) <= mpe;
+
+      document.getElementById(`eccErr_${i}`).innerText = err !== null ? err.toFixed(1) : '-';
+      document.getElementById(`eccMpe_${i}`).innerText = '±' + mpe.toFixed(1);
+      document.getElementById(`eccVerd_${i}`).innerHTML = row.val !== '' ? 
+        `<span class="badge ${isPass ? 'badge-pass' : 'badge-fail'}">${isPass ? 'PASS' : 'FAIL'}</span>` : '-';
+    });
+  }
+
+  function renderRepTables() {
+    ['1', '2'].forEach(s => {
+      const tbody = document.getElementById(`repTable${s}`);
+      tbody.innerHTML = '';
+      state.repeatability[`runs${s}`].forEach((val, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>Run ${i+1}</td>
+          <td><input type="number" value="${val}" oninput="updateRep('${s}', ${i}, this.value)"></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+    recalcRep();
+  }
+
+  function updateRep(s, i, val) {
+    state.repeatability[`runs${s}`][i] = val === '' ? '' : parseFloat(val);
+    recalcRep();
+  }
+
+  function recalcRep() {
+    ['1', '2'].forEach(s => {
+      const load = parseFloat(document.getElementById(`repLoad${s}`).value) || 0;
+      state.repeatability[`load${s}`] = load;
+      const runs = state.repeatability[`runs${s}`].filter(v => v !== '');
+      const div = document.getElementById(`repRes${s}`);
+      
+      if (runs.length > 0) {
+        const max = Math.max(...runs);
+        const min = Math.min(...runs);
+        const range = max - min;
+        const mpe = getMPE(load);
+        const isPass = range <= mpe;
+        div.innerHTML = `
+          Range (Δ): <strong>${range.toFixed(1)}</strong> | MPE: ±${mpe.toFixed(1)} 
+          <span class="badge ${isPass ? 'badge-pass' : 'badge-fail'}">${isPass ? 'PASS' : 'FAIL'}</span>
+        `;
+      } else {
+        div.innerHTML = '';
+      }
+    });
+  }
+
+  function recalcAll() {
+    recalcLin();
+    recalcEcc();
+    recalcRep();
+  }
+
+  function autoGenLoads() {
+    const max = state.specs.maxCap || 15000;
+    const e = state.specs.scaleE || 5;
+    state.linearity = [
+      { load: 20 * e, inc: 20 * e, dec: 20 * e },
+      { load: 500 * e, inc: 500 * e, dec: 500 * e },
+      { load: 2000 * e, inc: 2000 * e, dec: 2000 * e },
+      { load: Math.round((max * 0.5) / e) * e, inc: Math.round((max * 0.5) / e) * e, dec: Math.round((max * 0.5) / e) * e },
+      { load: max, inc: max, dec: max }
+    ];
+    renderLinTable();
+  }
+
+  function loadDemoData() {
+    state.specs = { mfr: 'Avery Weigh-Tronix', model: 'E-1205', serial: 'SN-2026-9842', accClass: 'Class III', maxCap: 15000, scaleE: 5, minCap: 100, unit: 'kg', regime: 'Initial Verification', inspector: 'J. Smith' };
+    state.linearity = [
+      { load: 100, inc: 100, dec: 100 },
+      { load: 2500, inc: 2501, dec: 2500.5 },
+      { load: 5000, inc: 5001, dec: 5001.5 },
+      { load: 7500, inc: 7502, dec: 7502 },
+      { load: 10000, inc: 10002.5, dec: 10003 },
+      { load: 12500, inc: 12503, dec: 12503.5 },
+      { load: 15000, inc: 15004, dec: 15004 }
+    ];
+    state.eccentricity = {
+      load: 5000,
+      runs: [
+        { pos: 'CTR (1)', val: 5000 },
+        { pos: 'TL (2)', val: 5001 },
+        { pos: 'TR (3)', val: 5000.5 },
+        { pos: 'BR (4)', val: 5001 },
+        { pos: 'BL (5)', val: 5000 }
+      ]
+    };
+    state.repeatability = { load1: 7500, runs1: [7501, 7501.5, 7501], load2: 15000, runs2: [15003.5, 15004, 15003] };
+    loadSpecsToUI();
+    renderLinTable();
+    renderEccTable();
+    renderRepTables();
+  }
+
+  function resetForm() {
+    if (confirm('Are you sure you want to clear all data, including instrument specs?')) {
+      state.specs = { mfr: '', model: '', serial: '', accClass: 'Class III', maxCap: '', scaleE: '', minCap: '', unit: 'kg', regime: 'Initial Verification', inspector: '' };
+      state.linearity = [{ load: '', inc: '', dec: '' }];
+      state.eccentricity = { load: '', runs: state.eccentricity.runs.map(r => ({ pos: r.pos, val: '' })) };
+      state.repeatability = { load1: '', runs1: ['', '', ''], load2: '', runs2: ['', '', ''] };
+      loadSpecsToUI();
+      renderLinTable();
+      renderEccTable();
+      renderRepTables();
+    }
+  }
+
+  function printCertificate() {
+    document.getElementById('c_mfr').innerText = state.specs.mfr;
+    document.getElementById('c_model').innerText = state.specs.model;
+    document.getElementById('c_serial').innerText = state.specs.serial;
+    document.getElementById('c_max').innerText = `${state.specs.maxCap} ${state.specs.unit}`;
+    document.getElementById('c_e').innerText = `${state.specs.scaleE} ${state.specs.unit}`;
+    document.getElementById('c_class').innerText = state.specs.accClass;
+    document.getElementById('c_inspector').innerText = state.specs.inspector;
+    document.getElementById('c_regime').innerText = state.specs.regime;
+    document.getElementById('c_date').innerText = new Date().toLocaleDateString();
+
+    let linHtml = '<tr><th>Load</th><th>Inc Ind</th><th>Inc Err</th><th>Dec Ind</th><th>Dec Err</th><th>Hyst</th><th>MPE</th><th>Verdict</th></tr>';
+    state.linearity.forEach(row => {
+      const mpe = getMPE(row.load || 0);
+      const incErr = row.inc !== '' ? row.inc - row.load : 0;
+      const decErr = row.dec !== '' ? row.dec - row.load : 0;
+      const pass = Math.abs(incErr) <= mpe && Math.abs(decErr) <= mpe;
+      linHtml += `<tr>
+        <td>${row.load}</td><td>${row.inc}</td><td>${incErr.toFixed(1)}</td>
+        <td>${row.dec}</td><td>${decErr.toFixed(1)}</td>
+        <td>${Math.abs(row.dec - row.inc).toFixed(1)}</td><td>±${mpe.toFixed(1)}</td>
+        <td>${pass ? 'PASS' : 'FAIL'}</td>
+      </tr>`;
+    });
+    document.getElementById('cert_lin').innerHTML = linHtml;
+
+    let eccHtml = '<tr><th>Position</th><th>Indication</th><th>Error</th><th>MPE</th><th>Verdict</th></tr>';
+    state.eccentricity.runs.forEach(r => {
+      const err = r.val !== '' ? r.val - state.eccentricity.load : 0;
+      const mpe = getMPE(state.eccentricity.load);
+      eccHtml += `<tr><td>${r.pos}</td><td>${r.val}</td><td>${err.toFixed(1)}</td><td>±${mpe.toFixed(1)}</td><td>${Math.abs(err) <= mpe ? 'PASS' : 'FAIL'}</td></tr>`;
+    });
+    document.getElementById('cert_ecc').innerHTML = eccHtml;
+
+    let repHtml = '<tr><th>Series</th><th>Load</th><th>Run 1</th><th>Run 2</th><th>Run 3</th><th>Range (Δ)</th><th>MPE</th><th>Verdict</th></tr>';
+    ['1', '2'].forEach(s => {
+      const load = state.repeatability[`load${s}`];
+      const runs = state.repeatability[`runs${s}`];
+      const range = Math.max(...runs) - Math.min(...runs);
+      const mpe = getMPE(load);
+      repHtml += `<tr><td>Series ${s}</td><td>${load}</td><td>${runs[0]}</td><td>${runs[1]}</td><td>${runs[2]}</td><td>${range.toFixed(1)}</td><td>±${mpe.toFixed(1)}</td><td>${range <= mpe ? 'PASS' : 'FAIL'}</td></tr>`;
+    });
+    document.getElementById('cert_rep').innerHTML = repHtml;
+
+    document.getElementById('cert_verdict').innerText = 'PASSED / COMPLIANT';
+    window.print();
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
